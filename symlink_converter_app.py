@@ -11,57 +11,117 @@ class SymlinkConverterApp:
         self.master.title("Symlink Converter")
         self.master.geometry("700x500")
 
-        self.source_folder = ""
-        self.destination_folder = ""
-
-        self.button_frame = tk.Frame(master)
+        # Configure dark theme colors
+        self.style = ttk.Style()
+        self.style.theme_use('default')
+        
+        # Configure colors
+        bg_color = "#2b2b2b"
+        fg_color = "#ffffff"
+        button_bg = "#3c3f41"
+        button_fg = "#ffffff"
+        tree_bg = "#313335"
+        tree_fg = "#ffffff"
+        tree_selected = "#4b6eaf"
+        
+        # Configure ttk styles
+        self.style.configure(
+            "Treeview",
+            background=tree_bg,
+            foreground=tree_fg,
+            fieldbackground=tree_bg
+        )
+        self.style.configure(
+            "Treeview.Heading",
+            background=button_bg,
+            foreground=button_fg
+        )
+        self.style.map(
+            "Treeview",
+            background=[('selected', tree_selected)],
+            foreground=[('selected', 'white')]
+        )
+        self.style.configure(
+            "TProgressbar",
+            troughcolor=bg_color,
+            background=tree_selected
+        )
+        
+        # Configure main window
+        self.master.configure(bg=bg_color)
+        
+        # Configure frames with background
+        self.button_frame = tk.Frame(master, bg=bg_color)
         self.button_frame.pack(pady=10)
+        
+        self.progress_frame = tk.Frame(master, bg=bg_color)
+        self.progress_frame.pack(pady=5, fill=tk.X, padx=10)
 
-        # Button to select source folder
+        # Configure buttons with new style
+        button_style = {
+            'bg': button_bg,
+            'fg': button_fg,
+            'relief': tk.FLAT,
+            'padx': 20,
+            'pady': 5,
+            'cursor': 'hand2'
+        }
+        
         self.select_source_button = tk.Button(
             self.button_frame,
             text="Select Source Folder",
-            command=self.select_source_folder
+            command=self.select_source_folder,
+            **button_style
         )
         self.select_source_button.pack(side=tk.LEFT, padx=5)
 
-        # Button to select destination folder
         self.select_destination_button = tk.Button(
             self.button_frame,
             text="Select Destination Folder",
             command=self.select_destination_folder,
-            state=tk.DISABLED
+            state=tk.DISABLED,
+            **button_style
         )
         self.select_destination_button.pack(side=tk.LEFT, padx=5)
 
-        # Button to start conversion
         self.convert_button = tk.Button(
             self.button_frame,
             text="Start Conversion",
             command=self.convert_symlinks,
-            state=tk.DISABLED
+            state=tk.DISABLED,
+            **button_style
         )
         self.convert_button.pack(side=tk.LEFT, padx=5)
 
+        # Configure progress label
+        self.progress_label = tk.Label(
+            self.progress_frame,
+            text="Ready...",
+            bg=bg_color,
+            fg=fg_color
+        )
+        self.progress_label.pack(side=tk.LEFT, padx=5)
+
+        # Create a frame to hold the Treeview and scrollbar
+        self.tree_frame = tk.Frame(master, bg=bg_color)
+        self.tree_frame.pack(pady=10, padx=10, fill=tk.BOTH, expand=True)
+
         # Treeview to log symlinks as we convert them
-        self.tree = ttk.Treeview(master, columns=("Path", "Target"), show="headings")
+        self.tree = ttk.Treeview(self.tree_frame, columns=("Path", "Target"), show="headings")
         self.tree.heading("Path", text="Symlink Path")
         self.tree.heading("Target", text="Symlink Target")
         self.tree.column("Path", width=330)
         self.tree.column("Target", width=330)
-        self.tree.pack(pady=10, padx=10, fill=tk.BOTH, expand=True)
-
-        self.scrollbar = ttk.Scrollbar(master, orient=tk.VERTICAL, command=self.tree.yview)
+        
+        # Add scrollbar
+        self.scrollbar = ttk.Scrollbar(self.tree_frame, orient=tk.VERTICAL, command=self.tree.yview)
         self.tree.configure(yscrollcommand=self.scrollbar.set)
+        
+        # Pack scrollbar and tree in the correct order
         self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         # Add progress bar
-        self.progress_frame = tk.Frame(master)
-        self.progress_frame.pack(pady=5, fill=tk.X, padx=10)
-        
-        self.progress_label = tk.Label(self.progress_frame, text="Ready...")
-        self.progress_label.pack(side=tk.LEFT, padx=5)
-        
         self.progress_bar = ttk.Progressbar(
             self.progress_frame,
             orient=tk.HORIZONTAL,
@@ -70,17 +130,35 @@ class SymlinkConverterApp:
         )
         self.progress_bar.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
+        # Add hover effects in init
+        self._configure_button_hover(self.select_source_button)
+
+    def _on_enter(self, event):
+        """Handle mouse enter event for buttons"""
+        event.widget.configure(bg="#4b6eaf")
+
+    def _on_leave(self, event):
+        """Handle mouse leave event for buttons"""
+        event.widget.configure(bg="#3c3f41")
+
+    # Add hover effects to buttons
+    def _configure_button_hover(self, button):
+        button.bind("<Enter>", self._on_enter)
+        button.bind("<Leave>", self._on_leave)
+
     def select_source_folder(self):
         folder_selected = filedialog.askdirectory(title="Select Source Folder")
         if folder_selected:
             self.source_folder = folder_selected
             self.select_destination_button.config(state=tk.NORMAL)
+            self._configure_button_hover(self.select_destination_button)
 
     def select_destination_folder(self):
         folder_selected = filedialog.askdirectory(title="Select Destination Folder")
         if folder_selected:
             self.destination_folder = folder_selected
             self.convert_button.config(state=tk.NORMAL)
+            self._configure_button_hover(self.convert_button)
 
     def convert_symlinks(self):
         if not self.source_folder:
